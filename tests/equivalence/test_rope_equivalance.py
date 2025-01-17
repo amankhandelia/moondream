@@ -19,7 +19,7 @@ def generate_test_cases():
     return [
         # (dim, end, num_heads, rot_dim, batch_size, seq_len, hidden_dim)
         (32, 16, 2, 32, 1, 8, 64),  # Minimal case
-        (64, 32, 4, 32, 2, 16, 128),  # Medium case
+        (64, 32, 4, 64, 2, 16, 128),  # Medium case
     ]
 
 
