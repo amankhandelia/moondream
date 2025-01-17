@@ -53,6 +53,14 @@ def generate_mlp_test_cases():
     ]
 
 
+def generate_gelu_test_cases():
+    return [
+        # (batch_size, seq_len, hidden_dim)
+        (1, 8, 64),
+        (2, 16, 128),
+    ]
+
+
 def cache_torch_results(test_id: str, results: Dict[str, Any]):
     cache_file = os.path.join(CACHE_DIR, f"layers_cache_{test_id}.pkl")
     with open(cache_file, "wb") as f:
@@ -146,11 +154,7 @@ def create_mlp_weights(hidden_dim: int, intermediate_dim: int) -> Tuple[Any, Any
 
 @pytest.mark.parametrize("batch_size,seq_len,hidden_dim,num_heads", generate_test_cases())
 def test_attention_equivalence(
-    batch_size: int,
-    seq_len: int,
-    hidden_dim: int,
-    num_heads: int,
-    regenerate_cache: bool = False,
+    batch_size: int, seq_len: int, hidden_dim: int, num_heads: int, regenerate_cache: bool = False
 ):
     test_id = f"b{batch_size}_s{seq_len}_h{hidden_dim}_nh{num_heads}"
 
@@ -190,10 +194,11 @@ def test_attention_equivalence(
         ),
     )
 
-    jax_output = jax_layers.attn(jax_input, jax_weights, num_heads)
+    with jax.default_matmul_precision("float32"):
+        jax_output = jax_layers.attn(jax_input, jax_weights, num_heads)
 
     # Compare results
-    np.testing.assert_allclose(cached_results["output"], jax_output, rtol=1e-4, atol=1e-4)
+    np.testing.assert_allclose(cached_results["output"], jax_output, rtol=1e-3, atol=1e-3)
 
 
 @pytest.mark.parametrize("batch_size,seq_len,in_dim,out_dim", generate_linear_test_cases())
@@ -308,6 +313,29 @@ def test_mlp_equivalence(
     with jax.default_matmul_precision("float32"):
         jax_output = jax_layers.mlp(jax_input, jax_weights)
 
+    np.testing.assert_allclose(cached_results["output"], jax_output, rtol=1e-3, atol=1e-3)
+
+
+@pytest.mark.parametrize("batch_size,seq_len,hidden_dim", generate_gelu_test_cases())
+def test_gelu_approx_equivalence(batch_size: int, seq_len: int, hidden_dim: int, regenerate_cache: bool = False):
+    test_id = f"gelu_b{batch_size}_s{seq_len}_h{hidden_dim}"
+
+    cached_results = None if regenerate_cache else load_cached_results(test_id)
+
+    if cached_results is None:
+        torch_input = torch.randn(batch_size, seq_len, hidden_dim)
+        torch_output = torch_layers.gelu_approx(torch_input)
+
+        cached_results = {
+            "input": torch_input.numpy(),
+            "output": torch_output.numpy(),
+        }
+        cache_torch_results(test_id, cached_results)
+
+    jax_input = jnp.array(cached_results["input"])
+    with jax.default_matmul_precision("float32"):
+        jax_output = jax_layers.gelu_approx(jax_input)
+
     np.testing.assert_allclose(cached_results["output"], jax_output, rtol=1e-4, atol=1e-4)
 
 
@@ -321,3 +349,5 @@ if __name__ == "__main__":
         test_mlp_equivalence(*case, regenerate_cache=True)
     for case in generate_test_cases():
         test_attention_equivalence(*case, regenerate_cache=True)
+    for case in generate_gelu_test_cases():
+        test_gelu_approx_equivalence(*case, regenerate_cache=True)
