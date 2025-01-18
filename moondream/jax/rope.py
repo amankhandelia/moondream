@@ -9,12 +9,11 @@ def precompute_freqs_cis(
     use_scaled: bool = False,
     dtype: jnp.dtype = jnp.float32,
 ) -> jnp.ndarray:
-    freqs = 1.0 / (theta ** (jnp.arange(0, dim, 2, dtype=dtype)[: (dim // 2)] / dim))
+    freqs = 1.0 / (theta ** (jnp.arange(0, dim // 2, dtype=dtype) / (dim // 2)))
     t = jnp.arange(end, dtype=dtype)[:, None]
     freqs = t * freqs[None, :]
-    freqs_cos = jnp.cos(freqs)
-    freqs_sin = jnp.sin(freqs)
-    return jnp.stack([freqs_cos, freqs_sin], axis=-1)
+    freqs_complex = jnp.exp(1j * freqs)
+    return jnp.stack([freqs_complex.real, freqs_complex.imag], axis=-1)
 
 
 def apply_rotary_emb(

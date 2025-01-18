@@ -1,12 +1,10 @@
 import torch
 import torch.nn as nn
-
 from torch.nn import functional as F
 
-from .layers import layer_norm, linear, mlp
-from .rope import apply_rotary_emb, precompute_freqs_cis
-from .weights import AttentionWeights
 from .config import TextConfig
+from .layers import AttentionWeights, layer_norm, linear, mlp
+from .rope import apply_rotary_emb, precompute_freqs_cis
 
 
 def text_encoder(input_ids: torch.Tensor, w: nn.Module):
@@ -25,10 +23,7 @@ def attn(
     bsz, q_len, d_model = x.shape
     head_dim = d_model // n_heads
 
-    q, k, v = [
-        t.view(bsz, q_len, n_heads, head_dim).transpose(1, 2)
-        for t in linear(x, w.qkv).chunk(3, dim=-1)
-    ]
+    q, k, v = [t.view(bsz, q_len, n_heads, head_dim).transpose(1, 2) for t in linear(x, w.qkv).chunk(3, dim=-1)]
 
     position_ids = torch.arange(pos, pos + q_len, dtype=torch.long)
     q = apply_rotary_emb(q, freqs_cis, position_ids, n_heads)
@@ -108,9 +103,7 @@ def decode_one_token(
     w: nn.Module,
     config: TextConfig,
 ):
-    hidden, kv_cache_update = text_decoder(
-        token_emb[None], w, kv_cache, attn_mask, pos, config
-    )
+    hidden, kv_cache_update = text_decoder(token_emb[None], w, kv_cache, attn_mask, pos, config)
     logits = lm_head(hidden, w)
     return logits, hidden, kv_cache_update
 
@@ -125,22 +118,14 @@ def build_text_model(config: TextConfig, dtype: torch.dtype) -> nn.Module:
                             "ln": nn.LayerNorm(config.dim, dtype=dtype),
                             "attn": nn.ModuleDict(
                                 {
-                                    "qkv": nn.Linear(
-                                        config.dim, 3 * config.dim, dtype=dtype
-                                    ),
-                                    "proj": nn.Linear(
-                                        config.dim, config.dim, dtype=dtype
-                                    ),
+                                    "qkv": nn.Linear(config.dim, 3 * config.dim, dtype=dtype),
+                                    "proj": nn.Linear(config.dim, config.dim, dtype=dtype),
                                 }
                             ),
                             "mlp": nn.ModuleDict(
                                 {
-                                    "fc1": nn.Linear(
-                                        config.dim, 4 * config.dim, dtype=dtype
-                                    ),
-                                    "fc2": nn.Linear(
-                                        4 * config.dim, config.dim, dtype=dtype
-                                    ),
+                                    "fc1": nn.Linear(config.dim, 4 * config.dim, dtype=dtype),
+                                    "fc2": nn.Linear(4 * config.dim, config.dim, dtype=dtype),
                                 }
                             ),
                         }
