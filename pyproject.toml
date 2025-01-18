@@ -1,0 +1,36 @@
+[project]
+name = "moondream"
+version = "0.1.0"
+description = "Python client library for moondream"
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "einops>=0.8.0",
+    "jax[tpu]==0.4.34",
+    "libtpu-nightly",
+    "numpy<2.0.0",
+    "pillow>=11.1.0",
+    "pyvips>=2.2.3",
+    "pyvips-binary>=8.16.0",
+    "safetensors>=0.5.2",
+    "tokenizers>=0.21.0",
+    "torch>=2.5.1",
+    "tpu-info>=0.2.0",
+]
+
+[tool.uv.sources]
+libtpu-nightly = { url = "https://storage.googleapis.com/libtpu-nightly-releases/wheels/libtpu-nightly/libtpu_nightly-0.1.dev20241002+nightly-py3-none-any.whl" }
+
+[dependency-groups]
+dev = [
+    "matplotlib>=3.10.0",
+    "pytest>=8.3.4",
+]
+
+# add python path for pytest
+[tool.pytest.ini_options]
+python_files = "tests.py test_*.py *_tests.py"
+pythonpath = [
+    ".",
+]

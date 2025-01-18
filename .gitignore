@@ -2,7 +2,6 @@
 __pycache__
 checkpoints
 data
-/pyproject.toml
 poetry.lock
 dist
 clients/python/moondream/torch
